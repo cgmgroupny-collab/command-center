@@ -635,6 +635,8 @@ function removeTask(s) { const q = s.toLowerCase(); let f = false; document.quer
 function addBlocker(project, text) { const p = projectMap[project]; const l = document.getElementById('blockers-list'); const i = document.createElement('div'); i.className = 'blocker-item'; i.innerHTML = `<span class="tag ${p ? p.tagClass : 'infra'}">${p ? p.label : 'INFRA'}</span> ${text}`; l.appendChild(i); updateBlockerCount(); showToast('Blocker added'); }
 function addIdea(title, desc) { const l = document.getElementById('ideas-list'); const i = document.createElement('div'); i.className = 'idea-item'; i.innerHTML = `<div class="idea-icon">&#9702;</div><div class="idea-text"><strong>${title}</strong>${desc ? ' &mdash; ' + desc : ''}</div>`; l.appendChild(i); updateIdeaCount(); showToast(`Idea: "${title}"`); }
 
+let _ready = false; // only save after init
+
 function updateTaskCount() {
   const total = document.querySelectorAll('.task-item:not(.removing)').length;
   const done = document.querySelectorAll('.task-check.checked').length;
@@ -648,9 +650,118 @@ function updateTaskCount() {
   document.getElementById('hero-open').textContent = open;
   document.getElementById('hero-pct').textContent = pct + '%';
   document.getElementById('hero-tasks-label').textContent = total + ' tasks';
+  if (_ready) saveState();
 }
-function updateBlockerCount() { document.getElementById('blockers-count').textContent = document.querySelectorAll('.blocker-item').length + ' items'; }
-function updateIdeaCount() { document.getElementById('ideas-count').textContent = document.querySelectorAll('.idea-item').length + ' items'; }
+function updateBlockerCount() { document.getElementById('blockers-count').textContent = document.querySelectorAll('.blocker-item').length + ' items'; if (_ready) saveState(); }
+function updateIdeaCount() { document.getElementById('ideas-count').textContent = document.querySelectorAll('.idea-item').length + ' items'; if (_ready) saveState(); }
+
+// ============ PERSISTENCE ============
+function saveState() {
+  const state = { projects: [], blockers: [], ideas: [] };
+  Object.entries(projectMap).forEach(([key, p]) => {
+    const tasks = [];
+    const group = document.getElementById(p.groupId);
+    if (group) group.querySelectorAll('.task-item').forEach(item => {
+      const txt = item.querySelector('.task-text');
+      const chk = item.querySelector('.task-check');
+      const priEl = txt?.querySelector('.priority');
+      // get raw text without the priority span
+      const rawText = txt ? Array.from(txt.childNodes).filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim() : '';
+      tasks.push({ text: rawText, done: chk?.classList.contains('checked') || false, blocked: chk?.classList.contains('blocked') || false, priority: priEl ? priEl.textContent.trim().toLowerCase() : '' });
+    });
+    const card = document.querySelector(`.brand-card[data-focus="${key}"]`);
+    const badge = card?.querySelector('.badge');
+    state.projects.push({ key, name: p.label.charAt(0) + p.label.slice(1).toLowerCase(), color: p.color, status: badge?.textContent?.trim() || 'Active', tasks });
+  });
+  document.querySelectorAll('.blocker-item').forEach(item => {
+    const tag = item.querySelector('.tag');
+    const tagCls = tag ? Array.from(tag.classList).find(c => c !== 'tag') : 'infra';
+    const tagLbl = tag?.textContent?.trim() || 'INFRA';
+    // text is everything after the tag
+    const textNode = item.childNodes[item.childNodes.length - 1];
+    state.blockers.push({ tagClass: tagCls, tagLabel: tagLbl, text: textNode?.textContent?.trim() || '' });
+  });
+  document.querySelectorAll('.idea-item').forEach(item => {
+    state.ideas.push(item.querySelector('.idea-text')?.innerHTML || '');
+  });
+  localStorage.setItem('cc-state', JSON.stringify(state));
+}
+
+function loadState() {
+  const raw = localStorage.getItem('cc-state');
+  if (!raw) return false;
+  let state;
+  try { state = JSON.parse(raw); } catch(e) { return false; }
+  if (!state.projects || state.projects.length === 0) return false;
+
+  // clear demo content
+  clearAll();
+
+  // rebuild projects + tasks
+  state.projects.forEach(proj => {
+    newProjColor = proj.color;
+    document.getElementById('newProjName').value = proj.name;
+    document.getElementById('newProjStatus').value = proj.status;
+    createProject();
+    const projKey = proj.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    proj.tasks.forEach(t => {
+      addTask(projKey, t.text, t.priority);
+      if (t.done || t.blocked) {
+        // find the last added task in this group
+        const group = document.getElementById('tasks-' + projKey);
+        if (group) {
+          const items = group.querySelectorAll('.task-item');
+          const last = items[items.length - 1];
+          if (last) {
+            const chk = last.querySelector('.task-check');
+            const txt = last.querySelector('.task-text');
+            if (t.done && chk) { chk.classList.add('checked'); if (txt) txt.classList.add('done'); }
+            if (t.blocked && chk) { chk.classList.remove('checked'); chk.classList.add('blocked'); }
+          }
+        }
+      }
+    });
+  });
+
+  // rebuild blockers
+  state.blockers.forEach(b => {
+    const list = document.getElementById('blockers-list');
+    const item = document.createElement('div');
+    item.className = 'blocker-item';
+    item.innerHTML = `<span class="tag ${b.tagClass}">${b.tagLabel}</span> ${b.text}`;
+    list.appendChild(item);
+  });
+
+  // rebuild ideas
+  state.ideas.forEach(html => {
+    const list = document.getElementById('ideas-list');
+    const item = document.createElement('div');
+    item.className = 'idea-item';
+    item.innerHTML = `<div class="idea-icon">&#9702;</div><div class="idea-text">${html}</div>`;
+    list.appendChild(item);
+  });
+
+  updateTaskCount();
+  updateBlockerCount();
+  updateIdeaCount();
+  return true;
+}
+
+function clearAll() {
+  document.querySelectorAll('.task-item').forEach(i => i.remove());
+  document.querySelectorAll('.blocker-item').forEach(i => i.remove());
+  document.querySelectorAll('.idea-item').forEach(i => i.remove());
+  document.querySelectorAll('.brand-card').forEach(c => c.remove());
+  document.querySelectorAll('.task-group').forEach(g => g.remove());
+  document.querySelectorAll('.prompt-tag').forEach(t => t.remove());
+  const select = document.getElementById('focusSelect');
+  while (select.options.length > 1) select.remove(1);
+  Object.keys(projectMap).forEach(k => delete projectMap[k]);
+  focusedProject = null; selectedProject = null;
+  document.querySelector('.header h1 span').textContent = '/ all projects';
+  const starter = document.getElementById('starter-section');
+  if (starter) starter.remove();
+}
 
 function runCommand(raw) {
   const input = raw.trim(); if (!input) return;
@@ -673,15 +784,28 @@ document.addEventListener('keydown', e => {
   if (e.key === '/' && document.activeElement !== promptInput) { e.preventDefault(); promptInput.focus(); }
   if (e.key === 'Escape') { promptInput.blur(); if (focusedProject) clearFocus(); else { document.querySelectorAll('.prompt-tag').forEach(t => t.classList.remove('sel')); selectedProject = null; } }
 });
-document.querySelectorAll('.task-check:not(.blocked)').forEach(el => {
-  el.addEventListener('click', () => { el.classList.toggle('checked'); const t = el.nextElementSibling; if (t) t.classList.toggle('done'); updateTaskCount(); });
-});
 
 // Timestamp
 const now = new Date();
 document.getElementById('footer-ts').textContent = `${now.toLocaleDateString('en-US')}`;
 document.getElementById('timestamp').textContent = now.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+// ============ INIT: load saved state or show demo ============
+const hasSaved = loadState();
+if (hasSaved) {
+  // returning user — restore their data, no tutorial
+  // rebind checkboxes for restored tasks
+  document.querySelectorAll('.task-check:not(.blocked)').forEach(el => {
+    el.addEventListener('click', () => { el.classList.toggle('checked'); const t = el.nextElementSibling; if (t) t.classList.toggle('done'); updateTaskCount(); });
+  });
+} else {
+  // first visit or empty — bind demo checkboxes
+  document.querySelectorAll('.task-check:not(.blocked)').forEach(el => {
+    el.addEventListener('click', () => { el.classList.toggle('checked'); const t = el.nextElementSibling; if (t) t.classList.toggle('done'); updateTaskCount(); });
+  });
+}
 updateTaskCount();
+_ready = true; // enable auto-save from now on
 
 // ============ ADD PROJECT ============
 let newProjColor = 'blue';
@@ -769,6 +893,7 @@ function createProject() {
 
   closeModal();
   updateTaskCount();
+  if (_ready) saveState();
   showToast(`Project "${name}" created!`);
 }
 
@@ -784,38 +909,11 @@ function resetDashboard() {
   fab.classList.remove('open');
   fab.textContent = '?';
 
-  // clear all task items
-  document.querySelectorAll('.task-item').forEach(i => i.remove());
-  // clear all blocker items
-  document.querySelectorAll('.blocker-item').forEach(i => i.remove());
-  // clear all ideas
-  document.querySelectorAll('.idea-item').forEach(i => i.remove());
-
-  // remove all brand cards (keep add-project card)
-  document.querySelectorAll('.brand-card').forEach(c => c.remove());
-
-  // clear all task groups
-  document.querySelectorAll('.task-group').forEach(g => g.remove());
-
-  // clear prompt tags (keep hint)
-  document.querySelectorAll('.prompt-tag').forEach(t => t.remove());
-
-  // clear dropdown options except "All Projects"
-  const select = document.getElementById('focusSelect');
-  while (select.options.length > 1) select.remove(1);
-
-  // reset projectMap
-  Object.keys(projectMap).forEach(k => delete projectMap[k]);
-
-  // clear focus
-  focusedProject = null;
-  selectedProject = null;
-  document.querySelector('.header h1 span').textContent = '/ all projects';
-
-  // update counts
+  clearAll();
   updateTaskCount();
   updateBlockerCount();
   updateIdeaCount();
+  if (_ready) saveState();
 
   // insert starter template section before the blockers
   const blockersSection = document.querySelector('.blockers-section');
@@ -906,6 +1004,7 @@ function applyTemplate(key) {
   const hdr = sec.querySelector('.collapse-header');
   if (!hdr.classList.contains('open')) { hdr.classList.add('open'); hdr.nextElementSibling.classList.add('open'); }
 
+  if (_ready) saveState();
   showToast(`Template "${key}" loaded!`);
 }
 
@@ -944,8 +1043,8 @@ function toggleTutorial() {
   if (!isOpen) { currentStep = 0; renderTutorial(); }
 }
 
-// Auto-open tutorial on first visit
-if (!localStorage.getItem('cc-tutorial-seen')) {
+// Auto-open tutorial ONLY on true first visit (no saved data, never seen)
+if (!hasSaved && !localStorage.getItem('cc-tutorial-seen')) {
   setTimeout(() => { toggleTutorial(); localStorage.setItem('cc-tutorial-seen', '1'); }, 1500);
 }
 </script>
