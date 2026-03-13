@@ -243,10 +243,49 @@
   .tut-nav .step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .2s}
   .tut-nav .step-dot.active{background:var(--cyan)}
 
+  /* === ADD PROJECT CARD === */
+  .add-project-card{background:transparent;border:2px dashed var(--border);border-radius:var(--radius);padding:22px 26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all .2s;min-height:140px}
+  .add-project-card:hover{border-color:var(--cyan);background:rgba(34,211,238,.03)}
+  .add-project-card .add-icon{font-size:2rem;color:var(--text-muted);transition:color .2s}
+  .add-project-card:hover .add-icon{color:var(--cyan)}
+  .add-project-card .add-label{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--text-muted);transition:color .2s}
+  .add-project-card:hover .add-label{color:var(--text-dim)}
+
+  /* === PROJECT MODAL === */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:4000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;width:420px;max-width:90vw}
+  .modal h2{font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;margin-bottom:20px;color:var(--text)}
+  .modal label{display:block;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;margin-top:16px}
+  .modal label:first-of-type{margin-top:0}
+  .modal input[type="text"]{width:100%;background:var(--surface2);border:2px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;font-size:1rem;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:border-color .2s}
+  .modal input[type="text"]:focus{border-color:var(--cyan)}
+  .modal .color-picks{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+  .modal .color-pick{width:32px;height:32px;border-radius:6px;border:2px solid transparent;cursor:pointer;transition:all .15s}
+  .modal .color-pick:hover,.modal .color-pick.sel{border-color:#fff;transform:scale(1.15)}
+  .modal .modal-actions{display:flex;gap:10px;margin-top:24px;justify-content:flex-end}
+  .modal .modal-actions button{padding:10px 20px;border-radius:var(--radius-sm);font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid var(--border)}
+  .modal .btn-cancel{background:var(--surface2);color:var(--text-dim)}
+  .modal .btn-cancel:hover{border-color:var(--text-muted)}
+  .modal .btn-create{background:rgba(34,211,238,.12);color:var(--cyan);border-color:rgba(34,211,238,.3)}
+  .modal .btn-create:hover{background:rgba(34,211,238,.2)}
+
+  /* === STARTER TEMPLATES === */
+  .starter-section{margin-bottom:24px;padding:24px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+  .starter-section h3{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;margin-bottom:16px;color:var(--cyan)}
+  .starter-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .starter-chip{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text-dim);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+  .starter-chip:hover{border-color:var(--cyan);color:var(--text);background:rgba(34,211,238,.06)}
+  .starter-chip .chip-plus{color:var(--cyan);font-weight:700}
+
+  .tut-start-btn{display:inline-block;margin-top:12px;padding:10px 24px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--cyan),var(--blue));color:#000;font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;border:none;cursor:pointer;transition:opacity .15s}
+  .tut-start-btn:hover{opacity:.85}
+
   @media(max-width:500px){
     .tut-panel{left:12px;right:12px;width:auto;bottom:88px}
     body{padding:20px 16px 80px;padding-top:110px}
     .prompt-bar{padding:12px 16px}
+    .modal{padding:24px 20px}
   }
 </style>
 </head>
@@ -347,6 +386,36 @@
     <div class="card-header"><div class="card-title">AI Project</div><div class="badge pending">Planned</div></div>
     <div class="metric"><div class="metric-label">Type</div><div class="metric-value c-cyan" style="font-size:1.4rem">AI Agent</div></div>
     <div class="metric-sub">Claude API &middot; Autonomous workflows</div>
+  </div>
+  <div class="add-project-card" onclick="openAddProject()">
+    <div class="add-icon">+</div>
+    <div class="add-label">Add Project</div>
+  </div>
+</div>
+
+<!-- ADD PROJECT MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2>New Project</h2>
+    <label>Project Name</label>
+    <input type="text" id="newProjName" placeholder="My Awesome Project" autocomplete="off">
+    <label>Status</label>
+    <input type="text" id="newProjStatus" placeholder="Active, In Dev, Planned..." value="Active" autocomplete="off">
+    <label>Color</label>
+    <div class="color-picks" id="colorPicks">
+      <div class="color-pick sel" data-color="blue" style="background:var(--blue)"></div>
+      <div class="color-pick" data-color="red" style="background:var(--red)"></div>
+      <div class="color-pick" data-color="green" style="background:var(--green)"></div>
+      <div class="color-pick" data-color="pink" style="background:var(--pink)"></div>
+      <div class="color-pick" data-color="cyan" style="background:var(--cyan)"></div>
+      <div class="color-pick" data-color="amber" style="background:var(--amber)"></div>
+      <div class="color-pick" data-color="purple" style="background:var(--purple)"></div>
+      <div class="color-pick" data-color="lime" style="background:var(--lime)"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-create" onclick="createProject()">Create</button>
+    </div>
   </div>
 </div>
 
@@ -591,7 +660,8 @@ function runCommand(raw) {
   if (m = input.match(/^(remove|delete|rm)\s+(.+)/i)) { removeTask(m[2].trim()); return; }
   if (m = input.match(/^blocker\s+(.+)/i)) { const proj = detectProject(m[1]); const txt = stripProject(m[1]); if (txt) addBlocker(proj, txt); return; }
   if (m = input.match(/^idea\s+(.+)/i)) { const p = m[1].split(/\s*[—\-:]\s*/); addIdea(p[0].trim(), p[1]?.trim() || ''); return; }
-  if (/^(help|\?)/i.test(input)) { showToast('add, done, remove, blocker, idea', 'info'); return; }
+  if (m = input.match(/^project\s+(.+)/i)) { newProjColor = 'cyan'; document.getElementById('newProjName').value = m[1].trim(); document.getElementById('newProjStatus').value = 'Active'; createProject(); return; }
+  if (/^(help|\?)/i.test(input)) { showToast('add, done, remove, blocker, idea, project', 'info'); return; }
   const proj = detectProject(input); addTask(proj, stripProject(input) || input);
 }
 
@@ -613,15 +683,241 @@ document.getElementById('footer-ts').textContent = `${now.toLocaleDateString('en
 document.getElementById('timestamp').textContent = now.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
 updateTaskCount();
 
+// ============ ADD PROJECT ============
+let newProjColor = 'blue';
+
+document.querySelectorAll('.color-pick').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.color-pick').forEach(c => c.classList.remove('sel'));
+    el.classList.add('sel');
+    newProjColor = el.dataset.color;
+  });
+});
+
+function openAddProject() {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('newProjName').value = '';
+  document.getElementById('newProjStatus').value = 'Active';
+  document.getElementById('newProjName').focus();
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function createProject() {
+  const name = document.getElementById('newProjName').value.trim();
+  const status = document.getElementById('newProjStatus').value.trim() || 'Active';
+  if (!name) { showToast('Enter a project name', 'error'); return; }
+
+  const key = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const color = newProjColor;
+  const tagClass = 'proj-' + key;
+  const groupId = 'tasks-' + key;
+  const label = name.toUpperCase();
+
+  // register in projectMap
+  projectMap[key] = { color, tagClass, groupId, label };
+
+  // add brand card before the add-project card
+  const addCard = document.querySelector('.add-project-card');
+  const card = document.createElement('div');
+  card.className = `brand-card c-${color}`;
+  card.dataset.focus = key;
+  card.onclick = () => focusProject(key);
+  const badgeClass = status.toLowerCase().includes('live') || status.toLowerCase().includes('active') ? 'active' : status.toLowerCase().includes('dev') ? 'dev' : 'pending';
+  card.innerHTML = `<div class="card-header"><div class="card-title">${name}</div><div class="badge ${badgeClass}">${status}</div></div><div class="metric"><div class="metric-label">Tasks</div><div class="metric-value c-${color}" style="font-size:1.8rem">0</div></div>`;
+  addCard.parentNode.insertBefore(card, addCard);
+
+  // add prompt tag
+  const tagColors = { blue:'t-blue', red:'t-red', green:'t-green', pink:'t-pink', cyan:'t-cyan', amber:'t-blue', purple:'t-purple', lime:'t-green' };
+  const tags = document.querySelector('.prompt-tags');
+  const hint = tags.querySelector('.prompt-hint');
+  const tag = document.createElement('span');
+  tag.className = `prompt-tag ${tagColors[color] || 't-cyan'}`;
+  tag.dataset.project = key;
+  tag.textContent = name;
+  tag.onclick = function() { selectProject(this); };
+  tags.insertBefore(tag, hint);
+
+  // add dropdown option
+  const select = document.getElementById('focusSelect');
+  const opt = document.createElement('option');
+  opt.value = key;
+  opt.textContent = name;
+  select.appendChild(opt);
+
+  // add task group
+  const tasksCols = document.querySelector('.tasks-columns');
+  const group = document.createElement('div');
+  group.className = 'task-group';
+  group.id = groupId;
+  group.innerHTML = `<div class="task-group-label"><span class="dot" style="background:var(--${color})"></span>${name}</div>`;
+  // find last wrapper or append directly
+  const lastWrapper = tasksCols.querySelector(':scope > div:last-child');
+  if (lastWrapper && !lastWrapper.classList.contains('task-group')) {
+    lastWrapper.appendChild(group);
+  } else {
+    const wrapper = document.createElement('div');
+    wrapper.appendChild(group);
+    tasksCols.appendChild(wrapper);
+  }
+
+  // update hero count
+  const projCount = Object.keys(projectMap).length;
+  document.querySelector('.hero-sub').innerHTML = `Managing <span>${projCount} projects</span> &middot; <span id="hero-tasks-label">${document.querySelectorAll('.task-item').length} tasks</span>`;
+
+  closeModal();
+  updateTaskCount();
+  showToast(`Project "${name}" created!`);
+}
+
+// modal enter key
+document.getElementById('newProjName').addEventListener('keydown', e => { if (e.key === 'Enter') createProject(); });
+
+// ============ RESET DASHBOARD (after tutorial) ============
+function resetDashboard() {
+  // close tutorial
+  const panel = document.getElementById('tutPanel');
+  const fab = document.getElementById('tutFab');
+  panel.classList.remove('open');
+  fab.classList.remove('open');
+  fab.textContent = '?';
+
+  // clear all task items
+  document.querySelectorAll('.task-item').forEach(i => i.remove());
+  // clear all blocker items
+  document.querySelectorAll('.blocker-item').forEach(i => i.remove());
+  // clear all ideas
+  document.querySelectorAll('.idea-item').forEach(i => i.remove());
+
+  // remove all brand cards (keep add-project card)
+  document.querySelectorAll('.brand-card').forEach(c => c.remove());
+
+  // clear all task groups
+  document.querySelectorAll('.task-group').forEach(g => g.remove());
+
+  // clear prompt tags (keep hint)
+  document.querySelectorAll('.prompt-tag').forEach(t => t.remove());
+
+  // clear dropdown options except "All Projects"
+  const select = document.getElementById('focusSelect');
+  while (select.options.length > 1) select.remove(1);
+
+  // reset projectMap
+  Object.keys(projectMap).forEach(k => delete projectMap[k]);
+
+  // clear focus
+  focusedProject = null;
+  selectedProject = null;
+  document.querySelector('.header h1 span').textContent = '/ all projects';
+
+  // update counts
+  updateTaskCount();
+  updateBlockerCount();
+  updateIdeaCount();
+
+  // insert starter template section before the blockers
+  const blockersSection = document.querySelector('.blockers-section');
+  let starterEl = document.getElementById('starter-section');
+  if (!starterEl) {
+    starterEl = document.createElement('div');
+    starterEl.id = 'starter-section';
+    starterEl.className = 'starter-section';
+    starterEl.innerHTML = `
+      <h3>Quick Start &mdash; pick a template or create your own</h3>
+      <div class="starter-chips">
+        <div class="starter-chip" onclick="applyTemplate('freelance')"><span class="chip-plus">+</span> Freelancer</div>
+        <div class="starter-chip" onclick="applyTemplate('startup')"><span class="chip-plus">+</span> Startup</div>
+        <div class="starter-chip" onclick="applyTemplate('student')"><span class="chip-plus">+</span> Student</div>
+        <div class="starter-chip" onclick="applyTemplate('creator')"><span class="chip-plus">+</span> Content Creator</div>
+        <div class="starter-chip" onclick="applyTemplate('dev')"><span class="chip-plus">+</span> Developer</div>
+        <div class="starter-chip" onclick="openAddProject()"><span class="chip-plus">+</span> Custom Project</div>
+      </div>
+    `;
+    blockersSection.parentNode.insertBefore(starterEl, blockersSection);
+  }
+
+  showToast('Dashboard cleared! Pick a template or add your own project.', 'info');
+}
+
+// ============ STARTER TEMPLATES ============
+const templates = {
+  freelance: {
+    projects: [
+      { name:'Client Work', color:'blue', status:'Active', tasks:['Send proposal to new lead','Finish homepage redesign','Invoice last project'] },
+      { name:'Portfolio', color:'green', status:'In Progress', tasks:['Update case studies','Add recent testimonials'] },
+      { name:'Admin', color:'pink', status:'Ongoing', tasks:['Track expenses this month','Follow up on unpaid invoice'] }
+    ]
+  },
+  startup: {
+    projects: [
+      { name:'Product', color:'cyan', status:'MVP', tasks:['Ship core feature','Set up analytics','User onboarding flow'] },
+      { name:'Growth', color:'green', status:'Active', tasks:['Launch landing page','Run first ad campaign'] },
+      { name:'Ops', color:'red', status:'Active', tasks:['Set up billing','Legal docs review'] }
+    ]
+  },
+  student: {
+    projects: [
+      { name:'Coursework', color:'blue', status:'Active', tasks:['Finish research paper','Study for midterm','Submit lab report'] },
+      { name:'Side Project', color:'green', status:'Building', tasks:['Build portfolio website','Push to GitHub'] },
+      { name:'Job Hunt', color:'pink', status:'Active', tasks:['Update resume','Apply to 5 internships','Prep for interviews'] }
+    ]
+  },
+  creator: {
+    projects: [
+      { name:'Content', color:'red', status:'Active', tasks:['Film next video','Edit podcast episode','Write newsletter'] },
+      { name:'Growth', color:'green', status:'Active', tasks:['Post on socials','Engage with community','Collaborate with creator'] },
+      { name:'Monetization', color:'amber', status:'Planned', tasks:['Research sponsorships','Set up merch store'] }
+    ]
+  },
+  dev: {
+    projects: [
+      { name:'Main App', color:'blue', status:'Live', tasks:['Fix production bug','Add dark mode','Write tests'] },
+      { name:'Open Source', color:'green', status:'Active', tasks:['Review pull requests','Update docs','Tag new release'] },
+      { name:'Learning', color:'purple', status:'Ongoing', tasks:['Complete Rust tutorial','Build side project with new framework'] }
+    ]
+  }
+};
+
+function applyTemplate(key) {
+  const tmpl = templates[key];
+  if (!tmpl) return;
+
+  // remove starter section
+  const starter = document.getElementById('starter-section');
+  if (starter) starter.remove();
+
+  // create each project and its tasks
+  tmpl.projects.forEach(proj => {
+    // set color picker
+    newProjColor = proj.color;
+    document.getElementById('newProjName').value = proj.name;
+    document.getElementById('newProjStatus').value = proj.status;
+    createProject();
+
+    // add tasks
+    const projKey = proj.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    proj.tasks.forEach(t => addTask(projKey, t));
+  });
+
+  // open tasks section
+  const sec = document.getElementById('tasks-section');
+  const hdr = sec.querySelector('.collapse-header');
+  if (!hdr.classList.contains('open')) { hdr.classList.add('open'); hdr.nextElementSibling.classList.add('open'); }
+
+  showToast(`Template "${key}" loaded!`);
+}
+
 // ============ TUTORIAL CHAT ============
 const tutSteps = [
   `<strong>Welcome to Command Center!</strong><br><br>A single-file dashboard to manage all your projects, tasks, blockers, and ideas. Let me show you around.`,
-  `<strong>The Command Bar</strong><br><br>The input at the top is your command center. Try typing:<br><br><code>add Deploy new feature</code><br><code>done stripe webhook</code><br><code>remove old task</code><br><code>blocker API rate limit</code><br><code>idea New marketing page</code>`,
-  `<strong>Project Tags</strong><br><br>Click the colored tags in the prompt bar to <strong>select a project</strong> before adding tasks. The command bar auto-detects projects from keywords too.`,
-  `<strong>Focus Mode</strong><br><br>Use the <strong>dropdown filter</strong> or <strong>click a project card</strong> to focus on a single project. Only that project's tasks and blockers will show. Press <strong>ESC</strong> to go back.`,
-  `<strong>Task Checkboxes</strong><br><br>Click the <strong>checkbox</strong> next to any task to mark it done. The progress ring in the hero updates live. Blockers are marked with a red <strong>!</strong> icon.`,
-  `<strong>Collapsible Sections</strong><br><br>Click any section header (Blockers, Tasks, Ideas) to <strong>expand or collapse</strong> it. Keep your view clean.`,
-  `<strong>Keyboard Shortcuts</strong><br><br><code>/</code> &mdash; Focus the command bar<br><code>Enter</code> &mdash; Run command<br><code>ESC</code> &mdash; Exit focus mode<br><br>That's it! Start managing your projects.`
+  `<strong>The Command Bar</strong><br><br>The input at the top is your command center. Try:<br><br><code>add Deploy new feature</code><br><code>done stripe webhook</code><br><code>remove old task</code><br><code>blocker API rate limit</code><br><code>idea New landing page</code>`,
+  `<strong>Project Focus</strong><br><br>Use the <strong>dropdown</strong> or <strong>click a project card</strong> to zoom into one project. Only its tasks and blockers show. Press <strong>ESC</strong> to go back.`,
+  `<strong>Interactive Tasks</strong><br><br>Click <strong>checkboxes</strong> to mark tasks done. The progress ring updates live. Red <strong>!</strong> = blocker.`,
+  `<strong>Add Projects</strong><br><br>Click the <strong>+ Add Project</strong> card to create new projects with custom names and colors. Or type <code>project My Project</code> in the command bar.`,
+  `<strong>Keyboard Shortcuts</strong><br><br><code>/</code> &mdash; Focus command bar<br><code>Enter</code> &mdash; Run command<br><code>ESC</code> &mdash; Exit focus mode`,
+  `<strong>Ready to go!</strong><br><br>I'll clear the demo data so you can start fresh. Pick a template or create your own projects.<br><br><button class="tut-start-btn" onclick="resetDashboard()">Start Fresh</button>`
 ];
 
 let currentStep = 0;
@@ -645,7 +941,7 @@ function toggleTutorial() {
   panel.classList.toggle('open');
   fab.classList.toggle('open');
   fab.textContent = isOpen ? '?' : '+';
-  if (!isOpen) renderTutorial();
+  if (!isOpen) { currentStep = 0; renderTutorial(); }
 }
 
 // Auto-open tutorial on first visit
