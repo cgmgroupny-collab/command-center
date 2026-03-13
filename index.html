@@ -790,22 +790,7 @@ const now = new Date();
 document.getElementById('footer-ts').textContent = `${now.toLocaleDateString('en-US')}`;
 document.getElementById('timestamp').textContent = now.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
 
-// ============ INIT: load saved state or show demo ============
-const hasSaved = loadState();
-if (hasSaved) {
-  // returning user — restore their data, no tutorial
-  // rebind checkboxes for restored tasks
-  document.querySelectorAll('.task-check:not(.blocked)').forEach(el => {
-    el.addEventListener('click', () => { el.classList.toggle('checked'); const t = el.nextElementSibling; if (t) t.classList.toggle('done'); updateTaskCount(); });
-  });
-} else {
-  // first visit or empty — bind demo checkboxes
-  document.querySelectorAll('.task-check:not(.blocked)').forEach(el => {
-    el.addEventListener('click', () => { el.classList.toggle('checked'); const t = el.nextElementSibling; if (t) t.classList.toggle('done'); updateTaskCount(); });
-  });
-}
-updateTaskCount();
-_ready = true; // enable auto-save from now on
+// (init moved below — after all declarations)
 
 // ============ ADD PROJECT ============
 let newProjColor = 'blue';
@@ -1042,6 +1027,15 @@ function toggleTutorial() {
   fab.textContent = isOpen ? '?' : '+';
   if (!isOpen) { currentStep = 0; renderTutorial(); }
 }
+
+// ============ INIT ============
+const hasSaved = loadState();
+// bind checkboxes (demo or restored)
+document.querySelectorAll('.task-check:not(.blocked)').forEach(el => {
+  el.addEventListener('click', () => { el.classList.toggle('checked'); const t = el.nextElementSibling; if (t) t.classList.toggle('done'); updateTaskCount(); });
+});
+updateTaskCount();
+_ready = true;
 
 // Auto-open tutorial ONLY on true first visit (no saved data, never seen)
 if (!hasSaved && !localStorage.getItem('cc-tutorial-seen')) {
